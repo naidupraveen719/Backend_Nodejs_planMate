@@ -8,6 +8,7 @@ var planpage=require('./routes/Planpage');
 var results=require('./routes/resultsPage');
 const cors = require('cors');
 const app = express();
+const PORT= process.env.PORT || 5000;
 require("dotenv").config();
 
 
@@ -27,6 +28,10 @@ app.use('/planpage',planpage);
 app.use('/results',results);
 
 
-app.listen(5000,()=>{
+app.listen(PORT,()=>{
     console.log('Server running...')
+})
+
+app.use('/',(req,res)=>{
+    res.send("welcome to planmateai backend");
 })
