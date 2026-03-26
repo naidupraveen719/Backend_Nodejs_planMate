@@ -1,10 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const Place = require('../model/placesmodel');
-const { ChatGoogleGenerativeAI } = require('@langchain/google-genai');
-const { z } = require('zod');
-const { StructuredOutputParser } = require('langchain/output_parsers');
-const { PromptTemplate } = require('@langchain/core/prompts');
+
+
 const middleware = require('../middlewares/authmiddleware');
 const Registeruser = require('../model/usersmodel');
 const Plan = require("../model/planModel");
@@ -12,30 +10,8 @@ require("dotenv").config();
 
 const router = express.Router();
 
-// ✅ Setup Gemini model
-const model = new ChatGoogleGenerativeAI({
-  model: "gemini-1.5-flash",
-  apiKey: process.env.GOOGLE_API_KEY,
-});
 
-// ✅ Schema for coordinates
-const coordinatesSchema = z.object({
-  latitude: z.number().describe("Latitude of the place"),
-  longitude: z.number().describe("Longitude of the place"),
-});
 
-const parser = StructuredOutputParser.fromZodSchema(coordinatesSchema);
-
-const prompt = new PromptTemplate({
-  template:
-    "Give me the latitude and longitude of {place}. Format = {format_instructions}",
-  inputVariables: ["place"],
-  partialVariables: {
-    format_instructions: parser.getFormatInstructions(),
-  },
-});
-
-const chain = prompt.pipe(model).pipe(parser);
 
 // ----------------------
 // Helper Functions
@@ -70,6 +46,33 @@ function createDistanceMatrix(places) {
   }
   return matrix;
 }
+
+function findCentralPlaceIndex(places) {
+  let avgLat = 0;
+  let avgLng = 0;
+
+  for (const p of places) {
+    avgLat += p.latitude;
+    avgLng += p.longitude;
+  }
+
+  avgLat /= places.length;
+  avgLng /= places.length;
+
+  let minDist = Infinity;
+  let centralIndex = 0;
+
+  places.forEach((p, index) => {
+    const dist = haversine(avgLat, avgLng, p.latitude, p.longitude);
+    if (dist < minDist) {
+      minDist = dist;
+      centralIndex = index;
+    }
+  });
+
+  return centralIndex;
+}
+
 
 function solveTSP(places, startIndex = 0) {
   const size = places.length;
@@ -168,21 +171,13 @@ router.post('/api/plan-trip', middleware, async (req, res) => {
     console.log("Authenticated user:", user.email);
 
     // 2. Proceed with your trip planning logic
-    const { selectedCategories, startAddress, budget, days, passengers } = req.body;
+    const { selectedCategories,  budget, days, passengers } = req.body;
     console.log("Received form data:", req.body);
 
-    let startCoordinates = null;
-    if (startAddress) {
-      try {
-        startCoordinates = await chain.invoke({ place: startAddress });
-        console.log("Start Address Coordinates:", startCoordinates);
-      } catch (err) {
-        console.error("Error fetching startAddress coordinates:", err);
-      }
-    }
+    
 
     if (!selectedCategories || selectedCategories.length === 0) {
-      return res.status(200).json({ startCoordinates, optimalPath: [], feasiblePlan: {} });
+      return res.status(200).json({ optimalPath: [], feasiblePlan: {} });
     }
 
     const query = { description: { $in: selectedCategories } };
@@ -193,19 +188,12 @@ router.post('/api/plan-trip', middleware, async (req, res) => {
 
     let matchingPlaces = matchingPlacesDocs.map(doc => doc.toObject());
 
-    if (startCoordinates) {
-      matchingPlaces.unshift({
-        place: startAddress,
-        latitude: startCoordinates.latitude,
-        longitude: startCoordinates.longitude,
-        expected_time_to_visit: "0",
-        entry_fees: "0",
-      });
-    }
 
     const indexedPlaces = matchingPlaces.map((p, i) => ({ ...p, index: i }));
 
-    const { route, distanceMatrix } = solveTSP(indexedPlaces, 0);
+    const startIndex = findCentralPlaceIndex(indexedPlaces);
+    const { route, distanceMatrix } = solveTSP(indexedPlaces, startIndex);
+
     const optimalPath = route.map((i) => indexedPlaces[i]);
 
     const feasiblePlan = calculateFeasiblePlaces(optimalPath, distanceMatrix, { budget, days, passengers });
@@ -215,7 +203,6 @@ router.post('/api/plan-trip', middleware, async (req, res) => {
     // ✅ Correctly create the new plan instance
     const newPlan = new Plan({
       userId: req.user.id,
-      startAddress: req.body.startAddress,
       days: req.body.days,             // Add the other user inputs
       passengers: req.body.passengers,
      feasiblePlaces: feasiblePlan.feasiblePlaces, // Use the array from the plan object

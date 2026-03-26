@@ -39,14 +39,25 @@ function organizePlanByDay(plan, dailyHours = 12, avgSpeedKmph = 40) {
     const dayWisePlan = [];
     let currentDay = { day: 1, places: [], hoursSpent: 0 };
 
-    for (let i = 1; i < plan.feasiblePlaces.length; i++) {
-        const prevPlace = plan.feasiblePlaces[i - 1];
-        const currentPlace = plan.feasiblePlaces[i];
+    for (let i = 0; i < plan.feasiblePlaces.length; i++) {
+    const currentPlace = plan.feasiblePlaces[i];
 
-        const distance = haversine(prevPlace.latitude, prevPlace.longitude, currentPlace.latitude, currentPlace.longitude);
-        const travelTime = distance / avgSpeedKmph;
-        const visitTime = parseTimeToHours(currentPlace.expected_time_to_visit);
-        const timeForThisStop = travelTime + visitTime;
+    let travelTime = 0;
+
+    if (i > 0) {
+        const prevPlace = plan.feasiblePlaces[i - 1];
+        const distance = haversine(
+            prevPlace.latitude,
+            prevPlace.longitude,
+            currentPlace.latitude,
+            currentPlace.longitude
+        );
+        travelTime = distance / avgSpeedKmph;
+    }
+
+    const visitTime = parseTimeToHours(currentPlace.expected_time_to_visit);
+    const timeForThisStop = travelTime + visitTime;
+
 
         // Check if a new day is needed (either time is up OR we are past the trip duration)
         if (currentDay.hoursSpent + timeForThisStop > dailyHours) {

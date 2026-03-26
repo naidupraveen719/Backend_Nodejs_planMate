@@ -25,7 +25,6 @@ const planSchema = new mongoose.Schema({
         default: 'draft'             // Automatically sets new plans to 'draft'
     },
     // The rest of the plan's data
-    startAddress: String,
     feasiblePlaces: [placeInPlanSchema],
     totalCost: Number,
     totalTime: Number,
