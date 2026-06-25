@@ -150,6 +150,9 @@ if (optimalPath.length > 0 && optimalPath[0]) {
       break;
     }
   }
+  console.log("Feasible Places Before Return:", feasiblePlaces);
+console.log("Total Cost:", totalCost);
+console.log("Total Time:", totalTime);
   return {
     feasiblePlaces,
     totalCost: Math.round(totalCost),
@@ -188,6 +191,9 @@ router.post('/api/plan-trip', middleware, async (req, res) => {
     const projection = { _id: 0, place: 1, latitude: 1, longitude: 1, expected_time_to_visit: 1, entry_fees: 1 };
     
     const matchingPlacesDocs = await Place.find(query, projection);
+    console.log("Selected Categories:", selectedCategories);
+console.log("Matching Places:", matchingPlacesDocs.length);
+console.log(matchingPlacesDocs);
     console.log("Matching Places Count:", matchingPlacesDocs.length);
 
 if (matchingPlacesDocs.length === 0) {
@@ -201,11 +207,14 @@ if (matchingPlacesDocs.length === 0) {
 
 
     const indexedPlaces = matchingPlaces.map((p, i) => ({ ...p, index: i }));
+    console.log("Indexed Places:", indexedPlaces.length);
 
     const startIndex = findCentralPlaceIndex(indexedPlaces);
     const { route, distanceMatrix } = solveTSP(indexedPlaces, startIndex);
 
     const optimalPath = route.map((i) => indexedPlaces[i]);
+    console.log("Optimal Path Length:", optimalPath.length);
+console.log(optimalPath);
     console.log("Optimal Path:", optimalPath);
 
     const feasiblePlan = calculateFeasiblePlaces(optimalPath, distanceMatrix, { budget, days, passengers });
