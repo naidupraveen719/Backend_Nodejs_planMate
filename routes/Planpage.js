@@ -124,7 +124,11 @@ function calculateFeasiblePlaces(optimalPath, distanceMatrix, userInput, costPer
   const totalHours = days * dailyHours;
   let totalCost = 0;
   let totalTime = 0;
-  let feasiblePlaces = [optimalPath[0]];
+  let feasiblePlaces = [];
+
+if (optimalPath.length > 0 && optimalPath[0]) {
+  feasiblePlaces.push(optimalPath[0]);
+}
 
   for (let i = 1; i < optimalPath.length; i++) {
     const prev = optimalPath[i - 1];
@@ -184,6 +188,13 @@ router.post('/api/plan-trip', middleware, async (req, res) => {
     const projection = { _id: 0, place: 1, latitude: 1, longitude: 1, expected_time_to_visit: 1, entry_fees: 1 };
     
     const matchingPlacesDocs = await Place.find(query, projection);
+    console.log("Matching Places Count:", matchingPlacesDocs.length);
+
+if (matchingPlacesDocs.length === 0) {
+  return res.status(404).json({
+    message: "No places found for selected categories."
+  });
+}
     console.log(`Found ${matchingPlacesDocs.length} matching places.`);
 
     let matchingPlaces = matchingPlacesDocs.map(doc => doc.toObject());
@@ -195,17 +206,35 @@ router.post('/api/plan-trip', middleware, async (req, res) => {
     const { route, distanceMatrix } = solveTSP(indexedPlaces, startIndex);
 
     const optimalPath = route.map((i) => indexedPlaces[i]);
+    console.log("Optimal Path:", optimalPath);
 
     const feasiblePlan = calculateFeasiblePlaces(optimalPath, distanceMatrix, { budget, days, passengers });
     console.log(`Number of feasible places: ${feasiblePlan.feasiblePlaces.length}`);
     console.log("Feasible Plan:", feasiblePlan);
 
     // ✅ Correctly create the new plan instance
+    console.log("Feasible Places Before Save:");
+console.log(feasiblePlan.feasiblePlaces);
+
+console.log(
+  "Contains Null:",
+  feasiblePlan.feasiblePlaces.some(p => p === null)
+);
+
+console.log(
+  "Contains Undefined:",
+  feasiblePlan.feasiblePlaces.some(p => p === undefined)
+);
     const newPlan = new Plan({
       userId: req.user.id,
       days: req.body.days,             // Add the other user inputs
       passengers: req.body.passengers,
-     feasiblePlaces: feasiblePlan.feasiblePlaces, // Use the array from the plan object
+     feasiblePlaces: feasiblePlan.feasiblePlaces.filter(
+  place =>
+    place &&
+    place.latitude != null &&
+    place.longitude != null
+), // Use the array from the plan object
      totalCost: feasiblePlan.totalCost,           // Use the cost from the plan object
      totalTime: feasiblePlan.totalTime,           // Use the time from the plan object
      totalBudget: req.body.budget,                // Use 'budget' from the request body
