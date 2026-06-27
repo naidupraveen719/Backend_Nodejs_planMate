@@ -190,12 +190,26 @@ router.post('/api/plan-trip', middleware, async (req, res) => {
     const query = { description: { $in: selectedCategories } };
     const projection = { _id: 0, place: 1, latitude: 1, longitude: 1, expected_time_to_visit: 1, entry_fees: 1 };
     
-    const matchingPlacesDocs = await Place.find(query, projection);
+    //const matchingPlacesDocs = await Place.find(query, projection);
+    const matchingPlacesDocs = await Place.find({}, projection);
     console.log("Selected Categories:", selectedCategories);
+
+const matchingPlacesDocs = await Place.find({}, projection);
+
+console.log("==================================");
+console.log("Matching Places:", matchingPlacesDocs.length);
+console.log("First Place:", matchingPlacesDocs[0]);
+console.log("==================================");
+
+//console.log("==================================");
+//console.log("Matching Places:", matchingPlacesDocs.length);
+//console.log("First Place:", matchingPlacesDocs[0]);
+//console.log("==================================");
+  /*  console.log("Selected Categories:", selectedCategories);
 console.log("Matching Places:", matchingPlacesDocs.length);
 console.log(matchingPlacesDocs);
     console.log("Matching Places Count:", matchingPlacesDocs.length);
-
+*/
 if (matchingPlacesDocs.length === 0) {
   return res.status(404).json({
     message: "No places found for selected categories."

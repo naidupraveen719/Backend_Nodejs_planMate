@@ -18,6 +18,9 @@ mongoose.connect(process.env.MONGO_URL,{
 }).then(
     () => console.log('DB Connection established')
 )
+mongoose.connection.once("open", () => {
+    console.log("Connected Database:", mongoose.connection.name);
+});
 
 app.use(express.json());
 
