@@ -191,7 +191,7 @@ router.post('/api/plan-trip', middleware, async (req, res) => {
     const projection = { _id: 0, place: 1, latitude: 1, longitude: 1, expected_time_to_visit: 1, entry_fees: 1 };
     
     //const matchingPlacesDocs = await Place.find(query, projection);
-    const matchingPlacesDocs = await Place.find({}, projection);
+   // const matchingPlacesDocs = await Place.find({}, projection);
     console.log("Selected Categories:", selectedCategories);
 
 const matchingPlacesDocs = await Place.find({}, projection);
